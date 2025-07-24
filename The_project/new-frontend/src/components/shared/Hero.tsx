@@ -1,15 +1,18 @@
-import { Button } from "@/components/ui/button"
+// src/components/shared/Hero.tsx
 
-export function Hero() {
+import { Button } from "@/components/ui/button"; // Button is used here
+
+export default function Hero() {
   return (
-    <section className="bg-slate-50 text-center py-20 px-6">
-      <h2 className="text-4xl font-extrabold text-slate-800 mb-4">
-        Empowering Farmers, Elevating Agriculture
-      </h2>
-      <p className="text-slate-600 max-w-xl mx-auto mb-6">
-        AgroBridge connects farmers with tools, resources, and opportunities to boost productivity and maximize profit.
+    <section className="text-center py-20 px-4 bg-gradient-to-tr from-green-50 to-yellow-50">
+      <h2 className="text-4xl md:text-5xl font-bold text-green-900 mb-4">Connecting Farmers to a Sustainable Future</h2>
+      <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto mb-6">
+        Explore modern agriculture solutions – loans, tools, fertilizers, and more all in one ecosystem.
       </p>
-      <Button className="text-lg px-6 py-4">Get Started</Button>
+      <div className="flex justify-center gap-4 flex-wrap">
+        <Button className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 text-lg rounded-xl shadow">Get Started</Button>
+        <Button variant="outline" className="px-6 py-3 text-lg rounded-xl shadow">Learn More</Button>
+      </div>
     </section>
-  )
+  );
 }
