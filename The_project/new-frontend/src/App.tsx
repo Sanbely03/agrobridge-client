@@ -1,63 +1,97 @@
-// src/App.tsx
-import { useEffect, useState } from 'react'; // Import useEffect and useState
-import axios from 'axios'; // Import axios
-// import './App.css'; // You can keep or remove this line depending on your styling preference.
-                     // If you're using Tailwind for everything, you might remove it.
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+// If you need Lucide icons, you'd import them here, e.g., import { Home } from 'lucide-react';
 
 function App() {
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [backendMessage, setBackendMessage] = useState('');
+  const [backendError, setBackendError] = useState('');
 
+  // Keep the backend connection test for now
   useEffect(() => {
-    // Access the environment variable (Vite automatically exposes VITE_ prefixed vars)
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     if (!API_BASE_URL) {
-      setError("VITE_API_BASE_URL is not defined in your .env file!");
+      setBackendError("VITE_API_BASE_URL is not defined in your .env file!");
       return;
     }
 
-    // MAKE SURE THE PATH IS /api/test HERE!
-    axios.get(`${API_BASE_URL}/api/test`) // Corrected to /api/test
+    axios.get(`${API_BASE_URL}/api/test`)
       .then(response => {
-        setMessage(response.data.message || 'Data fetched successfully!');
-        setError('');
+        setBackendMessage(response.data.message || 'Data fetched successfully!');
+        setBackendError('');
       })
       .catch(err => {
         console.error('Error fetching data:', err);
-        setError(`Failed to connect to backend: ${err.message}. Check browser console for details.`);
-        setMessage('');
+        setBackendError(`Failed to connect to backend: ${err.message}. Check console for details.`);
+        setBackendMessage('');
       });
-  }, []); // Empty dependency array means this runs once on component mount
+  }, []);
 
   return (
-    <div className="container mx-auto p-4 text-center">
-      <h1 className="text-3xl font-bold text-blue-600 p-4 rounded-lg bg-gray-100 mb-6">
-        AgroBridge Frontend
-      </h1>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header/Navbar */}
+      <header className="bg-white shadow-sm py-4 px-6 md:px-12">
+        <nav className="container mx-auto flex justify-between items-center">
+          {/* Logo/Site Title */}
+          <a href="/" className="text-2xl font-bold text-green-700">AgroBridge</a>
 
-      {/* Conditional rendering for backend message or error */}
-      {message && (
-        <p className="text-green-600 text-lg mb-4">
-          Backend Message: <span className="font-semibold">{message}</span>
-        </p>
-      )}
+          {/* Navigation Links (for larger screens) */}
+          <div className="hidden md:flex space-x-8">
+            <a href="#features" className="text-gray-600 hover:text-green-700 font-medium">Features</a>
+            <a href="#pricing" className="text-gray-600 hover:text-green-700 font-medium">Pricing</a>
+            <a href="#contact" className="text-gray-600 hover:text-green-700 font-medium">Contact</a>
+          </div>
 
-      {error && (
-        <p className="text-red-600 text-lg mb-4">
-          Error: <span className="font-semibold">{error}</span>
-        </p>
-      )}
+         {/* CTA/Login Buttons (for larger screens) */}
+<div className="hidden md:flex space-x-4">
+  <Button variant="ghost" className="px-4 py-2 text-gray-600 hover:text-green-700 font-medium rounded-lg">
+    Login
+  </Button>
+  <Button className="px-5 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition duration-300">
+    Sign Up
+  </Button>
+</div>
+          {/* Mobile Menu Icon (You'll add logic for this later) */}
+          <div className="md:hidden">
+            <button className="text-gray-600 focus:outline-none">
+              {/* You'd use a Lucide icon here, e.g., <Menu className="h-6 w-6" /> */}
+              ☰ {/* Placeholder for a menu icon */}
+            </button>
+          </div>
+        </nav>
+      </header>
 
-      {/* Your original template content (kept for now, you can modify as you build) */}
-      <div className="card mt-4 p-6 bg-white shadow-lg rounded-xl">
-        <p className="text-gray-700">
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs mt-6 text-sm text-center text-purple-500">
-        Click on the Vite and React logos to learn more
-      </p>
+      {/* Hero Section */}
+      <main className="flex-grow flex items-center justify-center text-center py-20 px-6">
+        <div className="max-w-4xl">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+            Connect Farmers to Markets, Seamlessly.
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 mb-8">
+            AgroBridge is your digital platform for efficient agricultural trade, fostering growth and sustainability.
+          </p>
+          <button className="px-8 py-4 bg-yellow-500 text-gray-900 text-lg font-bold rounded-full hover:bg-yellow-600 transition duration-300 shadow-lg">
+            Get Started Now!
+          </button>
+
+          {/* Backend message display - kept below hero for now */}
+          <div className="mt-8 p-4 bg-blue-100 rounded-lg text-blue-800">
+            {backendMessage && (
+              <p className="text-lg">
+                Backend Status: <span className="font-semibold">{backendMessage}</span>
+              </p>
+            )}
+            {backendError && (
+              <p className="text-red-600 text-lg">
+                Backend Error: <span className="font-semibold">{backendError}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* You can add a Footer here later */}
     </div>
   );
 }
