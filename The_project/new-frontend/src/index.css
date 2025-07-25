@@ -61,6 +61,31 @@
   }
 }
 
+/* Custom Animations for Hero Section */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+  opacity: 0; /* Start invisible */
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
+/* Add more delays as needed */
+
 @layer base {
   * {
     @apply border-border;
