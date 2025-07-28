@@ -1,15 +1,17 @@
-// src/main.tsx
+// new-frontend/src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx'; // Your main application component
-import './index.css'; // Global CSS imports
-import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
+import App from './App.tsx';
+import './index.css';
+import { BrowserRouter } from 'react-router-dom'; // Correctly imported here
+import { AuthProvider } from './context/AuthContext.tsx';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {/* Wrap your entire application with BrowserRouter */}
-    <BrowserRouter>
-      <App />
+    <BrowserRouter> {/* Correctly placed here, wrapping the entire app */}
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

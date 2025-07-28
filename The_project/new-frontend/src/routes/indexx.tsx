@@ -25,7 +25,7 @@ const MarketplacePage = () => <div style={{padding: '20px', textAlign: 'center'}
 
 function App() {
   return (
-    // BrowserRouter is GONE from here, it's ONLY in main.tsx
+    // <BrowserRouter> is NOT here; it's in main.tsx
     <Routes>
       {/* Wrap all routes that should have the standard header/footer with MainLayout */}
       <Route element={<MainLayout />}>
@@ -59,7 +59,7 @@ function App() {
         <Route path="/labor" element={<ProtectedRoute><LaborPage /></ProtectedRoute>} />
       </Route>
 
-      {/* Fallback route for any undefined paths */}
+      {/* Fallback route for any undefined paths (outside of MainLayout if you want it minimalist) */}
       <Route path="*" element={
         <div style={{padding: '50px', textAlign: 'center'}}>
           <h2>404 - Page Not Found</h2>

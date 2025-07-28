@@ -1,9 +1,11 @@
 // src/pages/Home.tsx
+// import { Header } from '../components/shared/Header'; // Remove if found
+// import { Footer } from '../components/shared/Footer'; // Remove if found
 
 import React from "react";
-import { Header } from "@/components/shared/Header"; // Your custom Header component
+// import { Header } from "@/components/shared/Header"; // Your custom Header component
 import Hero from "@/components/shared/Hero";       // Your custom Hero component
-import { Footer } from "@/components/shared/Footer"; // Your custom Footer component
+// import { Footer } from "@/components/shared/Footer"; // Your custom Footer component
 import { FeaturesSection } from "@/components/shared/FeaturesSection"; // NEW: Your custom Features Section component
 
 // Import ShadCN UI components and Lucide React icon used *directly* in Home.tsx
@@ -16,7 +18,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col"> {/* Added flex-col for sticky footer layout */}
       {/* 1. Header Section */}
-      <Header />
+      {/* <Header /> */}
 
       {/* 2. Hero Section */}
       <Hero />
@@ -41,7 +43,7 @@ export default function Home() {
       <div className="flex-grow"></div>
 
       {/* 5. Footer Section */}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

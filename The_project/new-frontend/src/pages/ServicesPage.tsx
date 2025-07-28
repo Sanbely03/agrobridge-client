@@ -4,8 +4,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // ShadCN Card components
-import { Header } from "@/components/shared/Header";
-import { Footer } from "@/components/shared/Footer";
+// import { Header } from "@/components/shared/Header";
+// import { Footer } from "@/components/shared/Footer";
 
 // Import Lucide icons for services
 import {
@@ -122,7 +122,7 @@ export default function ServicesPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header with Logo + Nav */}
-      <Header />
+      {/* <Header /> */}
 
       {/* Hero Section for Services Page */}
       <section className="bg-gradient-to-r from-green-600 to-blue-700 py-20 px-4 text-center text-white">
@@ -190,7 +190,7 @@ export default function ServicesPage() {
       <div className="flex-grow"></div>
 
       {/* Footer Section */}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
