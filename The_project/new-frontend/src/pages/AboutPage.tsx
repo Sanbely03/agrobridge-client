@@ -3,8 +3,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/shared/Header";
-import { Footer } from "@/components/shared/Footer";
+// import { Header } from "@/components/shared/Header";
+// import { Footer } from "@/components/shared/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 
 // Import Lucide icons for the "What Makes Us Different" section
@@ -25,7 +25,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <Header />
+      {/* <Header /> */}
 
       {/* 1. Hero Section for About Page - UPDATED WITH BLUR */}
       <section
@@ -130,7 +130,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer Section */}
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

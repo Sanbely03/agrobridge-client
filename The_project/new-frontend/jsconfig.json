@@ -1,0 +1,16 @@
+// jsconfig.json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "jsx": "react-jsx", // Important for React 17+ and Vite
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler", // Or "node" depending on your Vite setup
+    "allowJs": true,
+    "checkJs": false // Set to true if you want basic JS type checking
+  },
+  "include": ["src"]
+}
