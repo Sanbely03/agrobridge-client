@@ -8,10 +8,10 @@ import ForumPage from './pages/ForumPage';
 import FarmerRegistration from './components/auth/FarmerRegistration';
 import FarmerLogin from './components/auth/FarmerLogin';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import DashboardPage from './pages/DashboardPage';
+import DashboardPage from './pages/DashboardPage'; // Already imported
 
 // Import the MainLayout
-import MainLayout from './components/layout/MainLayout';
+import MainLayout from './components/layout/MainLayout'; // Already imported
 
 // Your placeholder components (these are fine)
 const LoansPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Loans Page (Protected)</h2><p>Apply for a loan here.</p></div>;
@@ -25,9 +25,26 @@ const MarketplacePage = () => <div style={{padding: '20px', textAlign: 'center'}
 
 function App() {
   return (
-    // BrowserRouter is GONE from here, it's ONLY in main.tsx
     <Routes>
-      {/* Wrap all routes that should have the standard header/footer with MainLayout */}
+      {/*
+        THIS IS THE CRITICAL CHANGE:
+        Move the /dashboard route OUTSIDE of MainLayout.
+        It will now render ProtectedRoute and DashboardPage directly,
+        without being wrapped by MainLayout.
+      */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage /> {/* DashboardPage will now handle its own full layout */}
+          </ProtectedRoute>
+        }
+      />
+
+      {/*
+        All other routes that *SHOULD* have the standard Header/Footer
+        provided by MainLayout remain nested here.
+      */}
       <Route element={<MainLayout />}>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -37,20 +54,12 @@ function App() {
         <Route path="/forum" element={<ForumPage />} />
         <Route path="/marketplace" element={<MarketplacePage />} />
 
-        {/* Authentication Routes */}
+        {/* Authentication Routes (these typically need the main app header/footer) */}
         <Route path="/register" element={<FarmerRegistration />} />
         <Route path="/signup" element={<FarmerRegistration />} />
         <Route path="/login" element={<FarmerLogin />} />
 
-        {/* Protected Routes - These will have BOTH MainLayout and ProtectedRoute checks */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Other Protected Routes that *DO* need MainLayout */}
         <Route path="/loans" element={<ProtectedRoute><LoansPage /></ProtectedRoute>} />
         <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
         <Route path="/equipment" element={<ProtectedRoute><EquipmentPage /></ProtectedRoute>} />
