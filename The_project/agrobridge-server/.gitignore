@@ -8,3 +8,6 @@ node_modules/
 
 # Firebase Service Account Key
 src/serviceAccountKey.json
+
+# Prisma generated client
+/src/generated/prisma/
