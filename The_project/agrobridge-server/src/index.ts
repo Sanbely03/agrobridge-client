@@ -3,8 +3,10 @@
 import express from 'express';
 import cors from 'cors';
 import testRoute from './routes/test.route'; // Keep this for now
+import authRoute from './routes/auth.route'; // Import the new auth routes
 import * as admin from 'firebase-admin';
-import serviceAccount from './serviceAccountKey.json'; // No assert needed here if using json.d.ts
+import serviceAccount from './serviceAccountKey.json'; // Corrected path, since it's in the same directory as index.ts
+// import './json.d.ts'; // Ensure this is imported if using json.d.ts for serviceAccountKey
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
@@ -19,6 +21,7 @@ app.use(express.json());
 
 // Mount routes
 app.use('/api', testRoute);
+app.use('/api/auth', authRoute); // Mount the new auth routes under /api/auth
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

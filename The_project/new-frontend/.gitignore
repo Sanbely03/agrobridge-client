@@ -23,6 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+node_modules/
 
 # Environment variables
 .env
+
+# Firebase Frontend Config
+src/firebaseConfig.ts

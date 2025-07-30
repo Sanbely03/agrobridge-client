@@ -54,12 +54,13 @@ import { getFirestore } from "firebase/firestore"; // If using Firestore for rol
 // };
 
 
-const firebaseConfig = {apiKey: "AIzaSyBpBSICOxeilZb-GvJgj9gEfUN364TdZ_4",
-  authDomain: "agrobridge-platform.firebaseapp.com",
-  projectId: "agrobridge-platform",
-  storageBucket: "agrobridge-platform.firebasestorage.app",
-  messagingSenderId: "868591678998",
-  appId: "1:868591678998:web:0aaf7b2beda637567c6737"
+const firebaseConfig = {
+  apiKey: "AIzaSyDY9o_a5iasulYzSDebwld4K1_ZML8B1yw",
+  authDomain: "agrobridge-2a5fb.firebaseapp.com",
+  projectId: "agrobridge-2a5fb",
+  storageBucket: "agrobridge-2a5fb.firebasestorage.app",
+  messagingSenderId: "337105958929",
+  appId: "1:337105958929:web:c076e20f431de3a101d9b0"
 };
 
 

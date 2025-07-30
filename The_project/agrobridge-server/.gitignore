@@ -1,2 +1,10 @@
 node_modules/
 /src/generated/prisma
+
+
+# Environment variables
+.env
+
+
+# Firebase Service Account Key
+src/serviceAccountKey.json
