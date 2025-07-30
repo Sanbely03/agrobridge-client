@@ -1,40 +1,35 @@
 // new-frontend/src/components/auth/ProtectedRoute.tsx
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext'; // Import our custom auth hook
+import { useAuth } from '../../context/AuthContext';
 
 interface ProtectedRouteProps {
-  children: ReactNode; // The component(s) that this route is protecting
+  children: React.ReactNode;
+  allowedRoles?: string[]; // Optional: specify roles allowed to access this route
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { currentUser, loading } = useAuth(); // Get current user and loading status from AuthContext
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+  const { isAuthenticated, user, loading } = useAuth();
 
-  // If auth state is still loading, show a loading message/spinner
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        fontSize: '20px',
-        color: '#333'
-      }}>
-        Loading user session...
-      </div>
-    );
+    // Show a loading spinner or message while authentication status is being determined
+    return <div className="flex justify-center items-center min-h-[calc(100vh-120px)] p-4 text-gray-600">Loading...</div>;
   }
 
-  // If there's no current user (not logged in), redirect to the login page
-  if (!currentUser) {
-    // Navigate component is used for declarative navigation
-    return <Navigate to="/login" replace />; // 'replace' prevents adding to history stack
+  if (!isAuthenticated) {
+    // If not authenticated, redirect to login page
+    return <Navigate to="/login" replace />;
   }
 
-  // If user is logged in, render the children components (the protected content)
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // If authenticated but role is not allowed, redirect to a "not authorized" page or home
+    console.warn(`User with role '${user.role}' tried to access a restricted page.`);
+    // You can redirect to /unauthorized or /home based on your preference
+    return <Navigate to="/" replace />; // Redirect to home if role is not allowed
+  }
+
+  // If authenticated and role is allowed (or no roles specified), render the children
   return <>{children}</>;
 };
 

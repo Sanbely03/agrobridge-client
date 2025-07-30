@@ -1,84 +1,107 @@
 // new-frontend/src/App.tsx
-import { Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import AboutPage from './pages/AboutPage';
-import ServicesPage from './pages/ServicesPage';
-import ContactPage from './pages/ContactPage';
-import ForumPage from './pages/ForumPage';
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import Header from './components/layout/Header'; // Assuming your Header component path
+import Footer from './components/layout/Footer'; // Assuming your Footer component path
+import Home from './components/pages/Home';
+import About from './components/pages/About';
+import Services from './components/pages/Services';
+import Contact from './components/pages/Contact';
+import Forum from './components/pages/Forum';
+import Marketplace from './components/pages/Marketplace'; // Assuming your Marketplace component path
+import Login from './components/auth/Login';
 import FarmerRegistration from './components/auth/FarmerRegistration';
-import FarmerLogin from './components/auth/FarmerLogin';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import DashboardPage from './pages/DashboardPage'; // Already imported
+import FarmerDashboard from './components/dashboards/FarmerDashboard'; // Import FarmerDashboard
+import InvestorDashboard from './components/dashboards/InvestorDashboard'; // Import InvestorDashboard
+import AdminDashboard from './components/dashboards/AdminDashboard'; // Import AdminDashboard
+import { AuthProvider, useAuth } from './context/AuthContext'; // Import useAuth to access user role
+import ProtectedRoute from './components/auth/ProtectedRoute'; // We'll create this next for better protection
 
-// Import the MainLayout
-import MainLayout from './components/layout/MainLayout'; // Already imported
+// LayoutWrapper component to conditionally render Header/Footer
+const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  const { isAuthenticated, user, loading } = useAuth(); // Use auth context to check user status and role
 
-// Your placeholder components (these are fine)
-const LoansPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Loans Page (Protected)</h2><p>Apply for a loan here.</p></div>;
-const ProductsPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Products Page (Protected)</h2><p>Browse fertilizers and seeds.</p></div>;
-const EquipmentPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Equipment Page (Protected)</h2><p>Find tractors and tools for rent.</p></div>;
-const AnalyticsPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Analytics Page (Protected)</h2><p>View crop sales predictions.</p></div>;
-const LandPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Land Lease Page (Protected)</h2><p>Explore land listings.</p></div>;
-const LaborPage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Labor Market Page (Protected)</h2><p>Connect with agricultural labor.</p></div>;
-const MarketplacePage = () => <div style={{padding: '20px', textAlign: 'center'}}><h2>Marketplace Page (Protected)</h2><p>Buy and sell produce.</p></div>;
+  // Define paths where Header and Footer should NOT be displayed
+  // This array can be expanded as needed
+  const noHeaderFooterPaths = [
+    '/farmer-dashboard',
+    '/investor-dashboard',
+    '/admin-dashboard',
+    // Add other dashboard-like paths here if they shouldn't have global header/footer
+  ];
 
+  const shouldShowHeaderFooter = !noHeaderFooterPaths.includes(location.pathname);
 
-function App() {
+  // If loading, you might want a loading spinner or blank page
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-xl">
+        Loading application...
+      </div>
+    );
+  }
+
   return (
-    <Routes>
-      {/*
-        THIS IS THE CRITICAL CHANGE:
-        Move the /dashboard route OUTSIDE of MainLayout.
-        It will now render ProtectedRoute and DashboardPage directly,
-        without being wrapped by MainLayout.
-      */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage /> {/* DashboardPage will now handle its own full layout */}
-          </ProtectedRoute>
-        }
-      />
-
-      {/*
-        All other routes that *SHOULD* have the standard Header/Footer
-        provided by MainLayout remain nested here.
-      */}
-      <Route element={<MainLayout />}>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/forum" element={<ForumPage />} />
-        <Route path="/marketplace" element={<MarketplacePage />} />
-
-        {/* Authentication Routes (these typically need the main app header/footer) */}
-        <Route path="/register" element={<FarmerRegistration />} />
-        <Route path="/signup" element={<FarmerRegistration />} />
-        <Route path="/login" element={<FarmerLogin />} />
-
-        {/* Other Protected Routes that *DO* need MainLayout */}
-        <Route path="/loans" element={<ProtectedRoute><LoansPage /></ProtectedRoute>} />
-        <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
-        <Route path="/equipment" element={<ProtectedRoute><EquipmentPage /></ProtectedRoute>} />
-        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-        <Route path="/land" element={<ProtectedRoute><LandPage /></ProtectedRoute>} />
-        <Route path="/labor" element={<ProtectedRoute><LaborPage /></ProtectedRoute>} />
-      </Route>
-
-      {/* Fallback route for any undefined paths */}
-      <Route path="*" element={
-        <div style={{padding: '50px', textAlign: 'center'}}>
-          <h2>404 - Page Not Found</h2>
-          <p>The page you are looking for does not exist.</p>
-          <p><a href="/" style={{color: '#4CAF50'}}>Go to Home</a></p>
-        </div>
-      } />
-
-    </Routes>
+    <div className="flex flex-col min-h-screen">
+      {shouldShowHeaderFooter && <Header />}
+      <main className="flex-grow">
+        {children}
+      </main>
+      {shouldShowHeaderFooter && <Footer />}
+    </div>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <AuthProvider> {/* AuthProvider wraps the entire application */}
+        <LayoutWrapper>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/forum" element={<Forum />} />
+            <Route path="/marketplace" element={<Marketplace />} /> {/* Marketplace can be public/protected based on MVP */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<FarmerRegistration />} /> {/* Assuming signup is for farmers initially */}
+
+            {/* Protected Dashboard Routes - Basic protection, will be enhanced */}
+            {/* The 'element' here directly uses the dashboard component */}
+            <Route path="/farmer-dashboard" element={
+              <ProtectedRoute allowedRoles={['farmer']}>
+                <FarmerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/investor-dashboard" element={
+              <ProtectedRoute allowedRoles={['investor']}>
+                <InvestorDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin-dashboard" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* General Dashboard Route (Fallback, can be removed if all roles have specific dashboards) */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute> {/* No specific roles means any authenticated user */}
+                <FarmerDashboard /> {/* Can be a generic dashboard or redirect to farmer dashboard for now */}
+              </ProtectedRoute>
+            } />
+
+            {/* Fallback for unmatched routes */}
+            <Route path="*" element={<h1 className="text-center text-3xl p-10">404 - Page Not Found</h1>} />
+          </Routes>
+        </LayoutWrapper>
+      </AuthProvider>
+    </Router>
+  );
+};
 
 export default App;

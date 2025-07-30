@@ -1,0 +1,53 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum Role {
+  FARMER
+  INVESTOR
+  ADMIN
+  LABOR_WORKER
+  SUPERVISOR
+}
+
+// --- MODELS ---
+model User {
+  id          String    @id @default(uuid())
+  firebaseUid String    @unique
+  email       String    @unique
+  fullName    String?
+  role        Role      @default(FARMER)
+  gender      String?
+  country     String?
+  state       String?
+  lga         String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  farms       Farm[] // Relationship: A user can own multiple farms
+
+  @@map("users") // Maps this model to a table named 'users' in the database
+}
+
+model Farm {
+  id            String    @id @default(uuid())
+  ownerId       String    // Foreign key to User
+  owner         User      @relation(fields: [ownerId], references: [id])
+  name          String
+  location      String?
+  sizeAcres     Float?
+  cropType      String?
+  gpsCoordinates String?   // Consider specialized type for production, e.g., PostGIS geometry
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("farms") // Maps this model to a table named 'farms' in the database
+}
