@@ -29,7 +29,7 @@ const FarmerRegistration: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { register } = useAuth();
+  const { register, user } = useAuth(); // Destructure 'register' and 'user'
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,8 +42,31 @@ const FarmerRegistration: React.FC = () => {
 
     setLoading(true);
     try {
-      await register(email, password, fullName);
-      navigate('/dashboard');
+      // Pass the default role 'farmer' during registration
+      await register(email, password, fullName, 'farmer');
+
+      // Redirection logic AFTER successful registration and user context is updated
+      setTimeout(() => {
+        if (user) { // Check if custom user object is available
+          switch (user.role) {
+            case 'farmer':
+              navigate('/farmer-dashboard');
+              break;
+            case 'investor':
+              navigate('/investor-dashboard');
+              break;
+            case 'admin':
+              navigate('/admin-dashboard');
+              break;
+            default:
+              navigate('/dashboard'); // Fallback for unknown roles
+          }
+        } else {
+          console.warn("User object not available immediately after registration, redirecting to general dashboard.");
+          navigate('/dashboard'); // Fallback
+        }
+      }, 0);
+
     } catch (err: any) {
       console.error("Registration error:", err);
       setError(err.message || 'Failed to register. Please try again.');
@@ -53,9 +76,8 @@ const FarmerRegistration: React.FC = () => {
   };
 
   return (
-    // Added 'relative' to the outer div in case there's any z-index issue
+    // Your styling and ShadCN components
     <div className="relative flex justify-center items-center min-h-[calc(100vh-120px)] p-4">
-      {/* Updated Card className: added 'z-10' to ensure it's above potential backgrounds */}
       <Card className="z-10 w-full max-w-md bg-gray-100 bg-opacity-70 backdrop-blur-sm shadow-lg rounded-xl border border-gray-200">
         <CardHeader>
           <CardTitle className="text-2xl text-center">Farmer Registration</CardTitle>

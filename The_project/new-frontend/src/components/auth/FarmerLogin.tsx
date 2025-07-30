@@ -1,8 +1,10 @@
-// new-frontend/src/components/auth/Login.tsx
+// new-frontend/src/components/auth/FarmerLogin.tsx
 
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+// import { auth } from '../../firebaseConfig'; // No longer directly used here, managed by AuthContext
+// import { signInWithEmailAndPassword } from 'firebase/auth'; // No longer directly used here
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // Import our custom auth hook
 
 // Import ShadCN UI components
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
@@ -10,26 +12,28 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
-const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const { login, user } = useAuth(); // Destructure 'user' from useAuth
+const FarmerLogin: React.FC = () => {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false); // Changed to boolean for loading state
+
+  const { login, user } = useAuth(); // Get login function and custom user object from context
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
+    setError(null);
     setLoading(true);
+
     try {
-      await login(email, password);
+      await login(email, password); // Use the login function from AuthContext
+
       // Redirection logic AFTER successful login and user context is updated
-      // We'll use a setTimeout to ensure the user context has updated
+      // Use setTimeout to ensure the `user` object in context has been updated
       setTimeout(() => {
-        if (user) { // Check if user object is available (should be after successful login)
+        if (user) { // Check if custom user object is available
           switch (user.role) {
             case 'farmer':
               navigate('/farmer-dashboard');
@@ -44,14 +48,15 @@ const Login: React.FC = () => {
               navigate('/dashboard'); // Fallback for unknown roles or generic dashboard
           }
         } else {
-          // This else block should ideally not be hit if login was successful
+          // Fallback if user object is not immediately available (should not happen if auth context is correct)
           console.warn("User object not available immediately after login, redirecting to general dashboard.");
           navigate('/dashboard');
         }
-      }, 0); // Use setTimeout(..., 0) to defer execution until next tick (allows state update)
+      }, 0); // Defer execution to next event loop tick
 
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.error("Login failed:", err);
+      // Firebase errors typically have a 'code' and 'message'
       setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -59,16 +64,17 @@ const Login: React.FC = () => {
   };
 
   return (
+    // Your styling and ShadCN components
     <div className="flex justify-center items-center min-h-[calc(100vh-120px)] p-4">
       <Card className="w-full max-w-md bg-gray-100 bg-opacity-70 backdrop-blur-sm shadow-lg rounded-xl border border-gray-200">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Farmer Login</CardTitle> {/* Changed to Farmer Login as per your context */}
+          <CardTitle className="text-2xl text-center">Farmer Login</CardTitle>
           <CardDescription className="text-center">
             Login to your AgroBridge account.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={handleLogin} className="grid gap-4">
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
             )}
@@ -112,4 +118,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default FarmerLogin;
