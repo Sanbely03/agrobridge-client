@@ -3,22 +3,14 @@
 import { Request, Response } from 'express';
 import * as admin from 'firebase-admin';
 import prisma from '../utils/prisma'; // Import the Prisma client instance
-import { UserRole, FarmingSpecialization } from '@prisma/client'; // Import enums for type safety
 
 // --- User Registration ---
 export const registerUser = async (req: Request, res: Response) => {
-  // Destructure farmingSpecialization from req.body
-  const { email, password, fullName, role, gender, country, state, lga, farmingSpecialization } = req.body;
+  const { email, password, fullName, role, gender, country, state, lga } = req.body;
 
   // Basic validation
-  // Note: farmingSpecialization is optional in schema, so not required here for all roles
   if (!email || !password || !fullName || !role) {
     return res.status(400).json({ message: 'Missing required fields: email, password, fullName, role.' });
-  }
-
-  // Optional: Validate farmingSpecialization if role is FARMER
-  if (role === UserRole.FARMER && farmingSpecialization && !(farmingSpecialization in FarmingSpecialization)) {
-    return res.status(400).json({ message: 'Invalid farming specialization provided.' });
   }
 
   try {
@@ -32,18 +24,18 @@ export const registerUser = async (req: Request, res: Response) => {
     // 2. Store additional user details in PostgreSQL via Prisma
     const newUser = await prisma.user.create({
       data: {
-        firebaseUid: userRecord.uid,
+        firebaseUid: userRecord.uid, // Link to Firebase UID
         email: userRecord.email!,
         fullName,
-        role: role as UserRole, // Cast role to UserRole enum
-        gender,
-        country,
-        state,
-        lga,
-        farmingSpecialization: farmingSpecialization as FarmingSpecialization, // Save specialization
+        role,
+        gender,    // Ensure these are passed to Prisma
+        country,   // Ensure these are passed to Prisma
+        state,     // Ensure these are passed to Prisma
+        lga,       // Ensure these are passed to Prisma
       },
     });
 
+    // --- THIS IS THE PART TO UPDATE ---
     res.status(201).json({
       message: 'User registered successfully!',
       user: {
@@ -52,19 +44,20 @@ export const registerUser = async (req: Request, res: Response) => {
         email: newUser.email,
         fullName: newUser.fullName,
         role: newUser.role,
-        gender: newUser.gender,
-        country: newUser.country,
-        state: newUser.state,
-        lga: newUser.lga,
-        farmingSpecialization: newUser.farmingSpecialization, // Include in response
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt,
+        gender: newUser.gender,     // Include in response
+        country: newUser.country,   // Include in response
+        state: newUser.state,       // Include in response
+        lga: newUser.lga,           // Include in response
+        createdAt: newUser.createdAt, // Also good to include timestamps
+        updatedAt: newUser.updatedAt, // Also good to include timestamps
       },
     });
+    // --- END OF UPDATE ---
 
   } catch (error: any) {
     console.error('Error during user registration:', error);
 
+    // Handle specific Firebase errors
     if (error.code === 'auth/email-already-in-use') {
       return res.status(409).json({ message: 'Email already registered with Firebase.', error: error.message });
     }
@@ -72,6 +65,7 @@ export const registerUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Password is too weak.', error: error.message });
     }
 
+    // Generic error response
     res.status(500).json({ message: 'Failed to register user.', error: error.message });
   }
 };
@@ -97,7 +91,6 @@ export const getUserProfile = async (req: Request, res: Response) => {
         country: true,
         state: true,
         lga: true,
-        farmingSpecialization: true, // Also include specialization here
         createdAt: true,
         updatedAt: true,
       },
@@ -112,22 +105,5 @@ export const getUserProfile = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error retrieving user profile:', error);
     res.status(500).json({ message: 'Failed to retrieve user profile.', error: error.message });
-  }
-};
-
-// --- Generate Custom Token for Testing ---
-export const generateCustomToken = async (req: Request, res: Response) => {
-  const { firebaseUid } = req.body;
-
-  if (!firebaseUid) {
-    return res.status(400).json({ message: 'Missing required field: firebaseUid' });
-  }
-
-  try {
-    const customToken = await admin.auth().createCustomToken(firebaseUid);
-    res.status(200).json({ message: 'Token generated successfully.', customToken });
-  } catch (error: any) {
-    console.error('Error generating custom token:', error);
-    res.status(500).json({ message: 'Failed to generate custom token.', error: error.message });
   }
 };

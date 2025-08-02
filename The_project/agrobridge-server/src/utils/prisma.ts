@@ -1,5 +1,5 @@
 // src/utils/prisma.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'; // This is the standard and correct import
 
 // Declare a global variable to store the PrismaClient instance
 // This prevents multiple instances of PrismaClient in development,
