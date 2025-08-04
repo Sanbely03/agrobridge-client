@@ -1,15 +1,17 @@
 "use strict";
-// src/routes/product.routes.ts
+// The_project/agrobridge-server/src/routes/product.routes.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const product_controller_1 = require("../controllers/product.controller");
-const auth_middleware_1 = require("../middlewares/auth.middleware"); // Assuming this path for middleware
+const product_controller_1 = require("../controllers/product.controller"); // Corrected import to singular name
+const authenticateToken_1 = require("../middlewares/authenticateToken");
+const checkRole_1 = require("../middlewares/checkRole");
 const router = (0, express_1.Router)();
-// Public routes for products
-router.get('/', product_controller_1.getAllProducts); // GET /api/products (get all products)
-router.get('/:id', product_controller_1.getProductById); // GET /api/products/:id (get product by ID)
-// Protected routes for products (requires authentication)
-router.post('/', auth_middleware_1.authenticateFirebaseToken, product_controller_1.createProduct); // POST /api/products (create a product)
-router.put('/:id', auth_middleware_1.authenticateFirebaseToken, product_controller_1.updateProduct); // PUT /api/products/:id (update a product)
-router.delete('/:id', auth_middleware_1.authenticateFirebaseToken, product_controller_1.deleteProduct); // DELETE /api/products/:id (delete a product)
+// Public routes
+router.get('/', product_controller_1.getAllProducts);
+router.get('/:id', product_controller_1.getProductById);
+// Protected routes (requires authentication)
+router.post('/', authenticateToken_1.authenticateToken, (0, checkRole_1.checkRole)(['FARMER', 'BUSINESS', 'SUPPLIER']), product_controller_1.createProduct);
+// Protected routes for product management (requires authentication & ownership)
+router.patch('/:id', authenticateToken_1.authenticateToken, product_controller_1.updateProduct);
+router.delete('/:id', authenticateToken_1.authenticateToken, product_controller_1.deleteProduct);
 exports.default = router;

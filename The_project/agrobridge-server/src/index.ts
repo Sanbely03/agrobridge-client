@@ -5,13 +5,13 @@
     import testRoute from './routes/test.route';
     import authRoute from './routes/auth.route';
     import productRoute from './routes/product.routes';
-    import * as admin from 'firebase-admin';
-    import serviceAccount from './serviceAccountKey.json';
+    // import * as admin from 'firebase-admin';
+    // import serviceAccount from './serviceAccountKey.json';
 
     // Initialize Firebase Admin SDK
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-    });
+    // admin.initializeApp({
+      // credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    // });
 
     const app = express();
     const PORT = process.env.PORT || 5000;

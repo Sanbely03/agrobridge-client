@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteProduct = exports.updateProduct = exports.getProductById = exports.getAllProducts = exports.createProduct = void 0;
-const prisma_1 = __importDefault(require("../utils/prisma"));
+const prisma_1 = __importDefault(require("../utils/prisma")); // Assuming prisma instance is imported from utils/prisma
 const client_1 = require("@prisma/client");
 // --- Helper to check if a category is a 'crop' category ---
 const isCropCategory = (category) => {
@@ -68,6 +68,7 @@ const createProduct = async (req, res) => {
             }
         }
         else {
+            // This handles roles like ADMIN, INVESTOR, BUSINESS, DELIVERY_PARTNER, VET, OVERSEER, LABOR_WORKER
             return res.status(403).json({ message: 'Unauthorized: Only farmers or suppliers can create products.' });
         }
         const product = await prisma_1.default.product.create({
@@ -187,11 +188,14 @@ const updateProduct = async (req, res) => {
         return res.status(401).json({ message: 'User not authenticated.' });
     }
     const { id } = req.params;
+    // Destructure all possible fields that can be updated.
+    // Use `undefined` for fields not provided in the request body to allow partial updates.
     const { name, description, category, price, quantity, unit, imageUrls } = req.body;
     try {
+        // Find the product to ensure it exists and belongs to the authenticated seller
         const product = await prisma_1.default.product.findUnique({
             where: { id },
-            select: { sellerId: true }
+            select: { sellerId: true } // Only need sellerId for authorization check
         });
         if (!product) {
             return res.status(404).json({ message: 'Product not found.' });
@@ -203,24 +207,28 @@ const updateProduct = async (req, res) => {
         if (!user || user.id !== product.sellerId) {
             return res.status(403).json({ message: 'Unauthorized: You can only update your own products.' });
         }
-        const productCategory = category;
-        if (user.role === client_1.UserRole.FARMER && !isCropCategory(productCategory) && !isLivestockCategory(productCategory)) {
-            return res.status(403).json({ message: 'Farmers can only update to crop produce or livestock product categories.' });
-        }
-        if (user.role === client_1.UserRole.SUPPLIER && !isSupplierCategory(productCategory)) {
-            return res.status(403).json({ message: 'Suppliers can only update to farm input product categories.' });
+        // Validate category update based on user role, if category is provided
+        if (category) {
+            const productCategory = category;
+            if (user.role === client_1.UserRole.FARMER && !isCropCategory(productCategory) && !isLivestockCategory(productCategory)) {
+                return res.status(403).json({ message: 'Farmers can only update to crop produce or livestock product categories.' });
+            }
+            if (user.role === client_1.UserRole.SUPPLIER && !isSupplierCategory(productCategory)) {
+                return res.status(403).json({ message: 'Suppliers can only update to farm input product categories.' });
+            }
         }
         const updatedProduct = await prisma_1.default.product.update({
             where: { id },
             data: {
-                name,
-                description,
-                category: productCategory,
-                price,
-                quantity,
-                unit,
-                imageUrls,
-                updatedAt: new Date(),
+                // Use nullish coalescing (??) or logical OR (||) to update only if provided, otherwise keep existing
+                name: name ?? undefined, // Use ?? undefined for Prisma to ignore if null/undefined
+                description: description ?? undefined,
+                category: category ?? undefined,
+                price: price ?? undefined,
+                quantity: quantity ?? undefined,
+                unit: unit ?? undefined,
+                imageUrls: imageUrls ?? undefined, // Assuming imageUrls is an array and can be completely replaced
+                updatedAt: new Date(), // Manually update updatedAt timestamp
             },
         });
         res.status(200).json({ message: 'Product updated successfully!', product: updatedProduct });
