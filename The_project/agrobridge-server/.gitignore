@@ -11,3 +11,15 @@ src/serviceAccountKey.json
 
 # Prisma generated client
 /src/generated/prisma/
+
+
+# Ignore compiled output directories
+**/dist/
+**/node_modules/
+
+# Ignore Firebase service account key (wherever it might be)
+**/serviceAccountKey.json
+
+# Ignore environment variable files
+.env
+.env.*
