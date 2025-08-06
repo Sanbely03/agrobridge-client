@@ -5,40 +5,34 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateToken = void 0;
-const firebaseAdmin_1 = __importDefault(require("../config/firebaseAdmin")); // Assuming you have firebaseAdmin config
-const prisma_1 = __importDefault(require("../utils/prisma")); // Assuming prisma instance is imported from utils/prisma
+const firebaseAdmin_1 = __importDefault(require("../config/firebaseAdmin"));
+const prisma_1 = __importDefault(require("../utils/prisma"));
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized: No token provided or invalid format.' });
+        return res.status(401).json({ message: 'Authentication failed: No token provided or invalid format.' });
     }
-    const idToken = authHeader.split(' ')[1]; // Extract the ID token
+    const idToken = authHeader.split('Bearer ')[1];
     try {
-        // Verify the ID token using Firebase Admin SDK
+        // Verify the Firebase ID token
         const decodedToken = await firebaseAdmin_1.default.auth().verifyIdToken(idToken);
-        req.currentUser = decodedToken; // Attach decoded token to request
-        // Fetch user from your database to get their internal ID and role
+        req.currentUser = decodedToken; // Store Firebase decoded token
+        // Fetch user from your PostgreSQL database using firebaseUid
         const user = await prisma_1.default.user.findUnique({
             where: { firebaseUid: decodedToken.uid },
-            select: { id: true, role: true } // Select only necessary fields
         });
         if (!user) {
-            return res.status(404).json({ message: 'User not found in database.' });
+            return res.status(404).json({ message: 'Authentication failed: User not found in database.' });
         }
-        // Attach a simplified user object to the request for easier access in controllers
-        req.user = {
-            id: user.id,
-            uid: decodedToken.uid,
-            role: user.role,
-        };
-        next(); // Proceed to the next middleware or route handler
+        req.user = user; // Store user from DB
+        next(); // Proceed to the next middleware/route handler
     }
     catch (error) {
         console.error('Error verifying Firebase ID token:', error);
         if (error.code === 'auth/id-token-expired') {
-            return res.status(401).json({ message: 'Unauthorized: Token expired.', error: error.message });
+            return res.status(401).json({ message: 'Authentication failed: Token expired.' });
         }
-        return res.status(401).json({ message: 'Unauthorized: Invalid token.', error: error.message });
+        return res.status(401).json({ message: 'Authentication failed: Invalid token.', error: error.message });
     }
 };
 exports.authenticateToken = authenticateToken;

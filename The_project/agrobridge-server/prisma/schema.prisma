@@ -10,9 +10,9 @@ generator client {
   output   = "../node_modules/.prisma/client" // CORRECTED PATH
 }
 
-// --- NEW ENUMS ---
+// --- ENUMS ---
 
-// User Roles: Expanded to include all stakeholders
+// User Roles: Consolidated to remove VET and OVERSEER as top-level roles
 enum UserRole {
   ADMIN
   FARMER
@@ -20,9 +20,7 @@ enum UserRole {
   BUSINESS // For restaurants/eateries
   SUPPLIER // For shop owners selling inputs
   DELIVERY_PARTNER // For delivery services
-  VET // Licensed veterinary doctors
-  OVERSEER // Farm supervisors/project monitors
-  LABOR_WORKER // NEW: For individual laborers
+  LABOR_WORKER // Now includes VETs and OVERSEERs via specialization
 }
 
 // Farmer Specialization: For farmers to choose their primary focus
@@ -64,7 +62,7 @@ enum LivestockCategory {
   RAMS
   CATTLE
   SHEEP
-  // Add more as needed, e.g., PIGS
+  OTHER_LIVESTOCK // For any other livestock not explicitly listed
 }
 
 // Loan Status: Remains the same, used for both Crop and Livestock projects
@@ -75,6 +73,65 @@ enum LoanStatus {
   IN_PROGRESS // For projects that have started
   COMPLETED // For projects that are finished
   CANCELLED // If a project is cancelled before completion
+  OVERDUE // Added for loans that are past due
+  DISBURSED // Added for loans where funds have been disbursed
+}
+
+// NEW ENUM: Crop Types (for LoanRequest and Product)
+enum CropType {
+  MAIZE
+  CASSAVA
+  YAM
+  COCOA
+  RICE
+  SOYBEANS
+  GROUNDNUT
+  MILLET
+  SORGHUM
+  WHEAT
+  TOMATOES
+  PEPPER
+  ONION
+  POTATOES
+  PLANTAIN
+  BANANA
+  OIL_PALM
+  RUBBER
+  CASH_CROPS // General for other cash crops
+  FOOD_CROPS // General for other food crops
+  OTHER_CROP // For any other crop not explicitly listed
+}
+
+// NEW ENUM: Farm Ownership Status
+enum FarmOwnershipStatus {
+  OWNED
+  RENTED
+  LEASED
+  FAMILY // Farm belongs to family, not personally owned/rented
+  COMMUNITY // Farm is part of a community land
+  OTHER // For any other ownership status
+}
+
+// NEW ENUM: Loan Purpose
+enum LoanPurpose {
+    CROP_FARMING
+  LIVESTOCK
+  EQUIPMENT
+  GENERAL
+  NEW_PROJECT // For starting a completely new farming venture
+  UPGRADE // For expanding or improving an existing farm/project
+  SUPPORT // For general operational support, emergency funds, etc.
+  // You can add more specific purposes later if needed
+
+}
+
+// NEW ENUM: Labor Specialization (for LABOR_WORKERs)
+enum LaborSpecialization {
+  VETERINARY // For VETs
+  FIELD_OVERSEER // For OVERSEERs
+  AGRONOMIST
+  FIELD_AGENT
+  OTHER
 }
 
 
@@ -84,10 +141,16 @@ enum LoanStatus {
 model User {
   id                    String                @id @default(uuid())
   firebaseUid           String                @unique
-  email                 String                @unique
+  email                 String                @unique // Assuming email is always present and unique
   fullName              String
-  role                  UserRole              @default(FARMER) // Default to farmer, but can be changed
+  role                  UserRole              @default(FARMER)
   farmingSpecialization FarmingSpecialization? // New field for farmer specialization
+  laborSpecialization   LaborSpecialization?   // NEW: For LABOR_WORKERs to specify their expertise
+
+  // New identification fields (made optional for inclusivity)
+  phoneNumber           String?               @unique // For farmer contact
+  nin                   String?               @unique // For farmer identification
+  bvn                   String?               @unique // For financial identification
 
   // Geographical location for users (farm, business, delivery base etc.)
   latitude              Float?
@@ -97,21 +160,30 @@ model User {
   country               String?
   state                 String?
   lga                   String?
+
+  // Profile completion status
+  isProfileComplete     Boolean               @default(false) // Tracks if user has completed their profile details
+
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
-  // Relations to other models (updated for 'sellerId')
-  products              Product[] // A user can be a seller of many products
-  loanRequests          LoanRequest[]
-  livestockProjects     LivestockProject[] // A user can initiate many livestock projects
+  // Relations to other models
+  products              Product[]             // A user can be a seller of many products
+  loanRequests          LoanRequest[]         @relation("FarmerLoanRequests") // Loans created by this farmer
+  livestockProjects     LivestockProject[]    // A user can initiate many livestock projects
+  wallet                Wallet?               // Link to the user's wallet (one-to-one)
 
   // Relations to new profile models (one-to-one)
   businessProfile       BusinessProfile?
   supplierProfile       SupplierProfile?
   deliveryPartnerProfile DeliveryPartnerProfile?
-  vetProfile            VetProfile?
-  overseerProfile       OverseerProfile?
-  laborWorkerProfile    LaborWorkerProfile? // NEW: Link to LaborWorkerProfile
+  vetProfile            VetProfile?            // Keep for now, but will be less critical
+  overseerProfile       OverseerProfile?       // Keep for now, but will be less critical
+  laborWorkerProfile    LaborWorkerProfile?    // This profile will now be the primary for these roles
+
+  // Relations for assigned loans (if user is LABOR_WORKER with specific specialization)
+  overseenLoans         LoanRequest[]         @relation("OverseerAssignedLoans")
+  assignedVeterinaryLoans LoanRequest[]       @relation("VeterinaryAssignedLoans")
 }
 
 // Product Model: Renamed 'farmerId' to 'sellerId' and updated relation
@@ -122,9 +194,9 @@ model Product {
   category    ProductCategory // Now uses expanded ProductCategory enum
   price       Float
   quantity    Int
-  unit        String // Unit of sale (e.g., KG, BAG, PIECE, LITER)
+  unit        String        // Unit of sale (e.g., KG, BAG, PIECE, LITER)
   imageUrls   String[]      @default([])
-  
+
   // Renamed from farmerId to sellerId
   sellerId    String
   seller      User          @relation(fields: [sellerId], references: [id]) // Renamed relation
@@ -133,115 +205,200 @@ model Product {
   updatedAt   DateTime      @updatedAt
 }
 
-// LoanRequest Model: Remains the same
+// LoanRequest Model: Significantly updated for detailed requirements
+
 model LoanRequest {
-  id                String      @id @default(uuid())
-  farmerId          String
-  farmer            User        @relation(fields: [farmerId], references: [id])
-  cropType          String
-  landSize          Float // in hectares
-  location          String // e.g., "Kaduna, Kaduna North"
-  estimatedYield    Float // in KG or bags
-  estimatedCost     Float
-  requestedAmount   Float
-  reason            String
-  status            LoanStatus  @default(PENDING)
-  rejectionReason   String?
-  approvedAmount    Float?
-  approvedDate      DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id                    String              @id @default(uuid())
+  farmer                User                @relation("FarmerLoanRequests", fields: [farmerId], references: [id])
+  farmerId              String
+
+  loanPurpose           LoanPurpose         @default(NEW_PROJECT) // ADDED DEFAULT
+
+  // Detailed Farm Information
+  locationState         String              @default("N/A") // ADDED DEFAULT
+  locationLGA           String              @default("N/A") // ADDED DEFAULT
+  locationVillage       String              @default("N/A") // ADDED DEFAULT
+  farmAreaName          String?
+  farmName              String?
+  ownershipStatus       FarmOwnershipStatus @default(OTHER) // ADDED DEFAULT
+
+  // Financial and Project Scope
+  estimatedCost         Float
+  requestedAmount       Float
+  reason                String
+
+  // Status and Approval fields
+  status                LoanStatus          @default(PENDING)
+  rejectionReason       String?
+  approvedAmount        Float?
+  approvedDate          DateTime?
+
+  // Supporting Documents
+  documentUrls          String[]            @default([])
+
+  // Conditional fields for Crop-specific details
+  cropType              CropType?
+  estimatedYield        Float?
+
+  // Conditional relationship for Livestock-specific details
+  livestockDetails      LivestockLoanDetails? @relation(fields: [livestockDetailsId], references: [id])
+  livestockDetailsId    String?             @unique
+
+  // Guarantor relationship
+  guarantor             Guarantor?          @relation(fields: [guarantorId], references: [id])
+  guarantorId           String?             @unique
+
+  // Relations for assigned Overseer, Veterinary, and Insurance Policy
+  overseer              User?               @relation("OverseerAssignedLoans", fields: [overseerId], references: [id])
+  overseerId            String?             // Nullable until assigned
+  veterinary            User?               @relation("VeterinaryAssignedLoans", fields: [veterinaryId], references: [id])
+  veterinaryId          String?             // Nullable until assigned (only for livestock loans)
+  insurancePolicy       InsurancePolicy?    @relation(fields: [insurancePolicyId], references: [id])
+  insurancePolicyId     String?             @unique // One-to-one with InsurancePolicy
+
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+// NEW MODEL: Guarantor
+model Guarantor {
+  id          String      @id @default(uuid())
+  name        String
+  placeOfWork String
+  address     String
+  phoneNumber String
+  // Relation back to LoanRequest (one-to-one)
+  loanRequest LoanRequest?
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
-// --- NEW MODELS FOR ROBUST MVP V1 ---
+// NEW MODEL: Wallet
+model Wallet {
+  id                    String    @id @default(uuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id])
+  withdrawableBalance   Float     @default(0.0) // Funds the user can withdraw
+  unwithdrawableBalance Float     @default(0.0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
 
-// LivestockProject Model: For farmer's livestock project applications
-model LivestockProject {
-  id                  String              @id @default(uuid())
-  farmerId            String
-  farmer              User                @relation(fields: [farmerId], references: [id])
+// NEW MODEL: LivestockLoanDetails (replaces LivestockProject for loan-specific details)
+model LivestockLoanDetails {
+  id                String             @id @default(uuid())
+  // Link back to the LoanRequest (no fields/references here, as it's defined on LoanRequest side)
+  loanRequest       LoanRequest?
 
-  livestockCategory   LivestockCategory // e.g., FISH_FARMING, CHICKENS
-  
+  livestockCategory LivestockCategory // e.g., "Broiler Chickens", "Goats", "Cattle"
+  numberOfAnimals   Int?              // For new projects or expansion
+  costOfField       Float?            // Rent or buying (for new projects)
+  livestockPlan     String?           // Description of the mix or specific breeds
+  feedingCost       Float?            // Estimated feeding cost
+
+  // Additional fields for livestock specific needs
+  housingType       String?           // e.g., deep litter, cage, open grazing
+  waterSource       String?           // For fish: type of pond, water source; for others: boreholes, etc.
+  veterinaryPlan    String?           // Details on disease prevention, vaccination schedule
+  marketStrategy    String?           // How the farmer plans to sell the livestock
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+
+// Existing Profile Models (ensure these are present and correct)
+model LivestockProject { // This model seems to be for a general project, not specifically a loan.
+  // If this was intended for loan details, LivestockLoanDetails now handles it.
+  // If it's for general farmer projects unrelated to loans, keep it.
+  // For now, I'm assuming LivestockLoanDetails handles loan-specific livestock data.
+  // If you want to keep this for *other* non-loan related livestock projects, let me know.
+  id                      String          @id @default(uuid())
+  farmerId                String
+  farmer                  User            @relation(fields: [farmerId], references: [id])
+
+  livestockCategory       LivestockCategory // e.g., FISH_FARMING, CHICKENS
+
   // Farm Details
-  farmLocation        String // Textual location (e.g., "Kaduna, Igabi")
-  farmLatitude        Float? // New: Geographical latitude of the farm
-  farmLongitude       Float? // New: Geographical longitude of the farm
-  farmSizeMeters      Float  // e.g., for land, pond size for fish
-  housingType         String? // e.g., deep litter, cage, open grazing
-  waterSource         String? // For fish: type of pond, water source; for others: boreholes, etc.
-  
-  // Project Scope & Loan Details
-  targetQuantity      Int    // e.g., Number of fish fingerlings, chicks, goats
-  estimatedCost       Float  // Total estimated cost for the project
-  requestedLoanAmount Float  // Loan amount farmer is requesting
-  loanPurpose         String // Detailed description of what the loan is for
-  
+  farmLocation            String // Textual location (e.g., "Kaduna, Igabi")
+  farmLatitude            Float? // New: Geographical latitude of the farm
+  farmLongitude           Float? // New: Geographical longitude of the farm
+  farmSizeMeters          Float  // e.g., for land, pond size for fish
+  housingType             String? // e.g., deep litter, cage, open grazing
+  waterSource             String? // For fish: type of pond, water source; for others: boreholes, etc.
+
+  // Project Scope & Loan Details (these are now handled by LoanRequest and LivestockLoanDetails)
+  // I'm keeping them here if this model is meant for general projects, not just loan-related ones.
+  // If this LivestockProject model is ONLY for loan-related projects, we should remove these fields
+  // and solely rely on LoanRequest and LivestockLoanDetails.
+  targetQuantity          Int    // e.g., Number of fish fingerlings, chicks, goats
+  estimatedCost           Float  // Total estimated cost for the project
+  requestedLoanAmount     Float  // Loan amount farmer is requesting
+  loanPurpose             String // Detailed description of what the loan is for
+
   // Supporting Documents (URLs to uploaded docs if required, e.g., land title, business plan)
-  documents           String[] @default([]) 
+  documents               String[] @default([])
 
   // Timeline
-  startDate           DateTime
+  startDate               DateTime
   estimatedCompletionDate DateTime
 
   // Status
-  status              LoanStatus          @default(PENDING)
-  rejectionReason     String?
-  approvedAmount      Float?
-  approvedDate        DateTime?
+  status                  LoanStatus          @default(PENDING)
+  rejectionReason         String?
+  approvedAmount          Float?
+  approvedDate            DateTime?
 
   // Assigned Oversight & Vet (V1: simple string/ID reference, future: proper relation)
-  assignedOverseerId  String? // ID of the User with OVERSEER role
-  assignedVetId       String? // ID of the User with VET role
-  
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  assignedOverseerId      String? // ID of the User with OVERSEER role
+  assignedVetId           String? // ID of the User with VET role
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
 }
+
 
 // BusinessProfile Model: For restaurants, bakeries, etc.
 model BusinessProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id])
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
   businessName  String
   businessType  String? // e.g., "Restaurant", "Bakery", "Hotel"
   contactPerson String?
   phoneNumber   String?
   address       String?
-  // Add more fields like preferred products for bulk purchase, typical quantities etc.
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // SupplierProfile Model: For shop owners selling inputs
 model SupplierProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
-  companyName     String
-  contactPerson   String?
-  phoneNumber     String?
-  address         String?
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  companyName    String
+  contactPerson  String?
+  phoneNumber    String?
+  address        String?
   supplyCategories String[] @default([]) // e.g., ["FEEDS", "MEDICINE"]
-  // Add more fields like business hours, delivery options for supplies
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // DeliveryPartnerProfile Model: For logistics and delivery services
 model DeliveryPartnerProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
-  companyName     String
-  contactPerson   String?
-  phoneNumber     String?
-  baseAddress     String?
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  companyName   String
+  contactPerson String?
+  phoneNumber   String?
+  baseAddress   String?
   serviceAreaText String? // e.g., "Kaduna State", "Within 50km of Abuja"
-  vehicleTypes    String[] @default([]) // e.g., ["Motorcycle", "Van", "Truck"]
-  // Add more fields like pricing structure (e.g., per km, per weight)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  vehicleTypes  String[] @default([]) // e.g., ["Motorcycle", "Van", "Truck"]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // VetProfile Model: For veterinary doctors
@@ -272,16 +429,31 @@ model OverseerProfile {
   updatedAt       DateTime @updatedAt
 }
 
-// NEW: LaborWorkerProfile Model
+// LaborWorkerProfile Model
 model LaborWorkerProfile {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
-  skills          String[] @default([]) // e.g., ["Harvesting", "Plowing", "Animal Care"]
-  availability    String?  // e.g., "Full-time", "Part-time", "On-call"
-  contactNumber   String?
-  bio             String?  // Short description of their experience/preferences
-  // Add more fields like preferred work location, experience level etc.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  skills        String[] @default([]) // e.g., ["Harvesting", "Plowing", "Animal Care"]
+  availability  String?  // e.g., "Full-time", "Part-time", "On-call"
+  contactNumber String?
+  bio           String?  // Short description of their experience/preferences
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// NEW MODEL: Insurance Policy
+model InsurancePolicy {
+  id             String      @id @default(uuid())
+  policyNumber   String      @unique
+  provider       String
+  coverageAmount Float
+  startDate      DateTime
+  endDate        DateTime
+  premium        Float
+  coveredRisks   String[]    // e.g., ["drought", "flood", "pest_outbreak"]
+  loanRequest    LoanRequest? // One-to-one relationship with LoanRequest
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }

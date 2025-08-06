@@ -1,5 +1,4 @@
 "use strict";
-// src/config/firebaseAdmin.ts
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -35,19 +34,18 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const admin = __importStar(require("firebase-admin"));
-// Load your service account key from environment variable or a file
-// For local development, you might load it from a file for convenience,
-// but for production, use environment variables.
-// const serviceAccount = require('../../serviceAccountKey.json'); // Adjust path as needed
-// For production, it's safer to load from environment variable
-// Ensure your serviceAccountKey.json content is base64 encoded and stored in an env var
-// Or, if using Google Cloud Run/App Engine, it handles credentials automatically.
-// For now, let's assume you'll load it from a file for local testing simplicity.
-// Make sure serviceAccountKey.json is in the root of your server directory
-// and is NOT committed to Git (as we discussed!).
-// const serviceAccount = require('../../serviceAccountKey.json'); // Example if file is in server root
-// If you prefer to use environment variables for the service account key JSON string:
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+if (!serviceAccountKey) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not defined in the environment variables.");
+}
+let serviceAccount;
+try {
+    serviceAccount = JSON.parse(serviceAccountKey);
+}
+catch (error) {
+    console.error("Error parsing FIREBASE_SERVICE_ACCOUNT_KEY JSON:", error);
+    throw new Error("Invalid JSON in FIREBASE_SERVICE_ACCOUNT_KEY environment variable.");
+}
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),

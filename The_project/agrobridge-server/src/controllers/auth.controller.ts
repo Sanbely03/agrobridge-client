@@ -1,133 +1,75 @@
 // src/controllers/auth.controller.ts
 
 import { Request, Response } from 'express';
-import * as admin from 'firebase-admin';
-import prisma from '../utils/prisma'; // Import the Prisma client instance
-import { UserRole, FarmingSpecialization } from '@prisma/client'; // Import enums for type safety
+import admin from '../config/firebaseAdmin'; // Firebase Admin SDK
+import prisma from '../utils/prisma'; // Prisma Client
+import { UserRole } from '@prisma/client'; // Import UserRole for custom claims
 
-// --- User Registration ---
-export const registerUser = async (req: Request, res: Response) => {
-  // Destructure farmingSpecialization from req.body
-  const { email, password, fullName, role, gender, country, state, lga, farmingSpecialization } = req.body;
+// --- Generate Custom Firebase Token ---
+// This endpoint takes email/password, looks up the user in Firebase,
+// and then generates a custom token for that user's UID.
+// This is primarily for backend-driven authentication flows or testing.
+export const generateCustomToken = async (req: Request, res: Response) => {
+  const { email, password } = req.body; // Expecting email and password for login
 
-  // Basic validation
-  // Note: farmingSpecialization is optional in schema, so not required here for all roles
-  if (!email || !password || !fullName || !role) {
-    return res.status(400).json({ message: 'Missing required fields: email, password, fullName, role.' });
-  }
-
-  // Optional: Validate farmingSpecialization if role is FARMER
-  if (role === UserRole.FARMER && farmingSpecialization && !(farmingSpecialization in FarmingSpecialization)) {
-    return res.status(400).json({ message: 'Invalid farming specialization provided.' });
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required to generate a token.' });
   }
 
   try {
-    // 1. Create user in Firebase Authentication
-    const userRecord = await admin.auth().createUser({
-      email,
-      password,
-      displayName: fullName,
-    });
+    // Step 1: Get the user record from Firebase Authentication by email.
+    // This confirms the user exists in Firebase.
+    const userRecord = await admin.auth().getUserByEmail(email);
 
-    // 2. Store additional user details in PostgreSQL via Prisma
-    const newUser = await prisma.user.create({
-      data: {
-        firebaseUid: userRecord.uid,
-        email: userRecord.email!,
-        fullName,
-        role: role as UserRole, // Cast role to UserRole enum
-        gender,
-        country,
-        state,
-        lga,
-        farmingSpecialization: farmingSpecialization as FarmingSpecialization, // Save specialization
-      },
-    });
-
-    res.status(201).json({
-      message: 'User registered successfully!',
-      user: {
-        id: newUser.id,
-        firebaseUid: newUser.firebaseUid,
-        email: newUser.email,
-        fullName: newUser.fullName,
-        role: newUser.role,
-        gender: newUser.gender,
-        country: newUser.country,
-        state: newUser.state,
-        lga: newUser.lga,
-        farmingSpecialization: newUser.farmingSpecialization, // Include in response
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt,
-      },
-    });
-
-  } catch (error: any) {
-    console.error('Error during user registration:', error);
-
-    if (error.code === 'auth/email-already-in-use') {
-      return res.status(409).json({ message: 'Email already registered with Firebase.', error: error.message });
-    }
-    if (error.code === 'auth/weak-password') {
-      return res.status(400).json({ message: 'Password is too weak.', error: error.message });
-    }
-
-    res.status(500).json({ message: 'Failed to register user.', error: error.message });
-  }
-};
-
-// --- Get User Profile (protected by Firebase token) ---
-export const getUserProfile = async (req: Request, res: Response) => {
-  // req.currentUser is populated by the authenticateFirebaseToken middleware
-  if (!req.currentUser) {
-    return res.status(401).json({ message: 'User not authenticated.' });
-  }
-
-  try {
-    // Find user in PostgreSQL using the Firebase UID
-    const user = await prisma.user.findUnique({
-      where: { firebaseUid: req.currentUser.uid },
-      select: { // Select specific fields to return
+    // Step 2: Fetch the user's details from your PostgreSQL database using their Firebase UID.
+    // This is important to get their role and specialization for custom claims.
+    const userInDb = await prisma.user.findUnique({
+      where: { firebaseUid: userRecord.uid },
+      select: {
         id: true,
-        firebaseUid: true,
+        role: true,
         email: true,
         fullName: true,
-        role: true,
-        gender: true,
-        country: true,
-        state: true,
-        lga: true,
-        farmingSpecialization: true, // Also include specialization here
-        createdAt: true,
-        updatedAt: true,
+        farmingSpecialization: true,
+        laborSpecialization: true,
       },
     });
 
-    if (!user) {
-      // This should ideally not happen if registration worked correctly
-      return res.status(404).json({ message: 'User not found in database.' });
+    if (!userInDb) {
+      // This scenario indicates a mismatch between Firebase Auth and your DB.
+      console.error(`User with Firebase UID ${userRecord.uid} not found in PostgreSQL DB.`);
+      return res.status(404).json({ message: 'Authentication failed: User not found in database.' });
     }
 
-    res.status(200).json({ message: 'User profile retrieved successfully.', user });
-  } catch (error: any) {
-    console.error('Error retrieving user profile:', error);
-    res.status(500).json({ message: 'Failed to retrieve user profile.', error: error.message });
-  }
-};
+    // Step 3: Create a custom token for the Firebase user's UID.
+    // Include custom claims (like role, userId, specializations) in the token.
+    // These claims can be accessed on the client-side after signing in with the custom token.
+    const customToken = await admin.auth().createCustomToken(userRecord.uid, {
+      role: userInDb.role,
+      userId: userInDb.id,
+      farmingSpecialization: userInDb.farmingSpecialization,
+      laborSpecialization: userInDb.laborSpecialization,
+    });
 
-// --- Generate Custom Token for Testing ---
-export const generateCustomToken = async (req: Request, res: Response) => {
-  const { firebaseUid } = req.body;
+    res.status(200).json({
+      message: 'Custom token generated successfully!',
+      customToken,
+      user: { // Return basic user info for convenience
+        id: userInDb.id,
+        email: userInDb.email,
+        fullName: userInDb.fullName,
+        role: userInDb.role,
+        farmingSpecialization: userInDb.farmingSpecialization,
+        laborSpecialization: userInDb.laborSpecialization,
+      },
+    });
 
-  if (!firebaseUid) {
-    return res.status(400).json({ message: 'Missing required field: firebaseUid' });
-  }
-
-  try {
-    const customToken = await admin.auth().createCustomToken(firebaseUid);
-    res.status(200).json({ message: 'Token generated successfully.', customToken });
   } catch (error: any) {
     console.error('Error generating custom token:', error);
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email' || error.code === 'auth/wrong-password') {
+      // Be generic for security: don't specify if it's email or password
+      return res.status(401).json({ message: 'Authentication failed: Invalid credentials.' });
+    }
     res.status(500).json({ message: 'Failed to generate custom token.', error: error.message });
   }
 };

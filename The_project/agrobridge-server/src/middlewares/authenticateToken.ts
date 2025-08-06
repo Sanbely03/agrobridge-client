@@ -1,58 +1,47 @@
 // src/middlewares/authenticateToken.ts
 
 import { Request, Response, NextFunction } from 'express';
-import admin from '../config/firebaseAdmin'; // Assuming you have firebaseAdmin config
-import prisma from '../utils/prisma'; // Assuming prisma instance is imported from utils/prisma
+import admin from '../config/firebaseAdmin';
+import prisma from '../utils/prisma';
+import { User } from '@prisma/client'; // Import User type from Prisma
 
-// Extend the Express Request type to include a currentUser property
-// This allows us to attach the decoded Firebase user to the request
+// Extend the Request type to include currentUser (Firebase) and user (from DB)
 export interface CustomRequest extends Request {
   currentUser?: admin.auth.DecodedIdToken;
-  user?: { // Also include a 'user' property with Prisma User model fields if needed
-    id: string;
-    uid: string;
-    role: string;
-    // Add other relevant user fields you might need in controllers
-  };
+  user?: User; // User from your PostgreSQL DB
 }
 
 export const authenticateToken = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized: No token provided or invalid format.' });
+    return res.status(401).json({ message: 'Authentication failed: No token provided or invalid format.' });
   }
 
-  const idToken = authHeader.split(' ')[1]; // Extract the ID token
+  const idToken = authHeader.split('Bearer ')[1];
 
   try {
-    // Verify the ID token using Firebase Admin SDK
+    // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    req.currentUser = decodedToken; // Attach decoded token to request
+    req.currentUser = decodedToken; // Store Firebase decoded token
 
-    // Fetch user from your database to get their internal ID and role
+    // Fetch user from your PostgreSQL database using firebaseUid
     const user = await prisma.user.findUnique({
       where: { firebaseUid: decodedToken.uid },
-      select: { id: true, role: true } // Select only necessary fields
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found in database.' });
+      return res.status(404).json({ message: 'Authentication failed: User not found in database.' });
     }
 
-    // Attach a simplified user object to the request for easier access in controllers
-    req.user = {
-      id: user.id,
-      uid: decodedToken.uid,
-      role: user.role,
-    };
+    req.user = user; // Store user from DB
 
-    next(); // Proceed to the next middleware or route handler
+    next(); // Proceed to the next middleware/route handler
   } catch (error: any) {
     console.error('Error verifying Firebase ID token:', error);
     if (error.code === 'auth/id-token-expired') {
-      return res.status(401).json({ message: 'Unauthorized: Token expired.', error: error.message });
+      return res.status(401).json({ message: 'Authentication failed: Token expired.' });
     }
-    return res.status(401).json({ message: 'Unauthorized: Invalid token.', error: error.message });
+    return res.status(401).json({ message: 'Authentication failed: Invalid token.', error: error.message });
   }
 };
