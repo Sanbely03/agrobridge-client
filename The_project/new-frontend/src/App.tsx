@@ -6,6 +6,9 @@ import AboutPage from "./pages/AboutPage";
 import ServicesPage from "./pages/ServicesPage";
 import ContactPage from "./pages/ContactPage";
 import MarketplacePage from "./pages/MarketplacePage";
+import FarmerLogin from "./components/auth/FarmerLogin";
+import FarmerRegistration from "./components/auth/FarmerRegistration";
+
 
 import ForumPage from "./pages/ForumPage";  // <-- Import ForumPage here
 import DashboardPage from "./pages/user/DashboardPage";
@@ -23,6 +26,11 @@ export default function App() {
         <Route path="/marketplace" element={<MarketplacePage />} />
         <Route path="/forum" element={<ForumPage />} /> 
          {/* Add Forum route */}
+         
+  {/* Farmer Auth Pages */}
+  <Route path="/login" element={<FarmerLogin />} />
+  <Route path="/signup" element={<FarmerRegistration />} />
+
       </Route>
 
       {/* User Routes */}
