@@ -1,8 +1,8 @@
 // new-frontend/src/context/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth, db } from '../../firebaseConfig'; // Import Firebase auth and Firestore DB
-import { User as FirebaseUser } from 'firebase/auth'; // Alias for Firebase User type
+import { auth, db } from '../firebaseConfig';
+import type { User as FirebaseUser } from "firebase/auth";
 import { doc, getDoc, setDoc } from 'firebase/firestore'; // For Firestore operations
 import axios from 'axios'; // For custom backend calls (e.g., if roles are in your custom DB)
 
